@@ -1,0 +1,39 @@
+name: Build and test
+on: push
+
+jobs:
+  linux:
+    name: Build and test on Linux
+    runs-on: linux-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: 6.0.x
+      - name: Test
+        run: |
+          dotnet test -c Debug --nologo --verbosity minimal --nologo --collect:"XPlat Code Coverage" -r coverage --DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=lcov
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.github_token }}
+          path-to-lcov: coverage/*/*.lcov
+      - name: Build
+        run: |
+          mkdir -p dist
+          dotnet publish -c Release -o win -r win-x64 --nologo -v:m --self-contained
+          zip -9r dist/PACSify-win.zip win
+          dotnet publish -c Release -o pacsify-lin -r linux-x64 --nologo -v:m --self-contained
+          tar cf - pacsify-lin | xz -9e > dist/pacsify-lin.txz
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@2.2.1
+        if: contains(github.ref, 'refs/tags/v')
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/*
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
+          

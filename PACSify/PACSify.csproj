@@ -5,6 +5,8 @@
         <TargetFramework>net6.0</TargetFramework>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <LangVersion>10</LangVersion>
+        <PublishSingleFile>true</PublishSingleFile>
+    	<UseAppHost>true</UseAppHost>
     </PropertyGroup>
 
     <ItemGroup>
