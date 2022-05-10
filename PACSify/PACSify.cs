@@ -1,17 +1,26 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using FellowOakDicom.Network;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace PACSify;
 
-static class Program
+class Program : BackgroundService
 {
     public static string Exe;
     static void Main(string[] args)
-    {
+    { 
         Exe = args[0];
+        Host.CreateDefaultBuilder(args).UseWindowsService().UseSystemd()
+            .ConfigureServices(s => s.AddHostedService<Program>());
+    }
 
+    /// <inheritdoc />
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
         using var server = DicomServerFactory.Create<StoreScp>(1104);
-        Console.WriteLine("Awaiting data...");
-        Console.ReadLine();
+        await Task.Run(() => stoppingToken.WaitHandle.WaitOne(), stoppingToken);
     }
 }
