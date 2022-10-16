@@ -13,6 +13,7 @@ class Program : BackgroundService
     static void Main(string[] args)
     { 
         Exe = args[0];
+        UpdateFetcher.AutoUpdate();
         Host.CreateDefaultBuilder(args).UseWindowsService().UseSystemd()
             .ConfigureServices(s => s.AddHostedService<Program>());
     }
