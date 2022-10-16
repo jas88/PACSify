@@ -19,7 +19,7 @@ public class Tests
         cancelTokenSource.Cancel(true);
         var stoppingToken=cancelTokenSource.Token;
         using var server = DicomServerFactory.Create<StoreScp>(1104);
-        Assert.Throws<TaskCanceledException>(async () => await Task.Run(() => stoppingToken.WaitHandle.WaitOne(), stoppingToken));
+        Assert.ThrowsAsync<TaskCanceledException>(async () => await Task.Run(() => stoppingToken.WaitHandle.WaitOne(), stoppingToken));
         Assert.Pass();
     }
 }
