@@ -6,7 +6,6 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FellowOakDicom;
-using FellowOakDicom.Imaging.Codec;
 using FellowOakDicom.Log;
 using FellowOakDicom.Network;
 using FellowOakDicom.Network.Client;
@@ -51,9 +50,7 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
         DicomTransferSyntax.ImplicitVRLittleEndian
     };
 
-    public StoreScp(INetworkStream stream, Encoding enc, ILogger log, ILogManager logManager,
-        INetworkManager netManager,
-        ITranscoderManager transcoder) : base(stream, enc, log, logManager, netManager, transcoder)
+    public StoreScp(INetworkStream stream, Encoding enc, ILogger log, DicomServiceDependencies deps) : base(stream, enc, log, deps)
     {
         _workdir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(_workdir);
