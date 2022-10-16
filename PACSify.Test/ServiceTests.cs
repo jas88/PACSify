@@ -13,7 +13,7 @@ public class Tests
     }
 
     [Test]
-    public async void Test1()
+    public async Task Test1()
     {
         var cancelTokenSource = new CancellationTokenSource();
         cancelTokenSource.Cancel(true);
