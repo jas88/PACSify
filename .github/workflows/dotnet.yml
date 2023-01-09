@@ -14,7 +14,7 @@ jobs:
           dotnet-version: 6.0.x
       - name: Test
         run: |
-          dotnet test -c Debug --nologo --verbosity minimal --nologo --collect:"XPlat Code Coverage" -r coverage -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=lcov
+          dotnet test -c Debug --nologo --verbosity minimal --nologo --collect:"XPlat Code Coverage" --results-directory coverage -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=lcov
           ls -lR coverage
           mv coverage/*/* coverage.lcov
       - name: Upload coverage to Coveralls
@@ -30,7 +30,7 @@ jobs:
           dotnet publish -c Release -o pacsify-lin -r linux-x64 --nologo -v:m --self-contained
           tar cf - pacsify-lin | xz -9e > dist/pacsify-lin.txz
       - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@2.3.0
+        uses: svenstaro/upload-release-action@2.4.0
         if: contains(github.ref, 'refs/tags/v')
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
