@@ -6,6 +6,7 @@
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <LangVersion>10</LangVersion>
         <PublishSingleFile>true</PublishSingleFile>
+        <DebugType>embedded</DebugType>
     	<UseAppHost>true</UseAppHost>
     </PropertyGroup>
 
