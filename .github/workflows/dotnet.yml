@@ -25,9 +25,9 @@ jobs:
       - name: Build
         run: |
           mkdir -p dist
-          dotnet publish -c Release -o win -r win-x64 --nologo -v:m --self-contained
+          dotnet publish PACSify/PACSify.csproj -c Release -o win -r win-x64 --nologo -v:m --self-contained
           zip -9r dist/PACSify-win.zip win
-          dotnet publish -c Release -o pacsify-lin -r linux-x64 --nologo -v:m --self-contained
+          dotnet publish PACSify/PACSify.csproj -c Release -o pacsify-lin -r linux-x64 --nologo -v:m --self-contained
           tar cf - pacsify-lin | xz -9e > dist/pacsify-lin.txz
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@2.4.1
