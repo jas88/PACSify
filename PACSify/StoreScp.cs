@@ -6,9 +6,9 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FellowOakDicom;
-using FellowOakDicom.Log;
 using FellowOakDicom.Network;
 using FellowOakDicom.Network.Client;
+using Microsoft.Extensions.Logging;
 
 namespace PACSify;
 
@@ -59,13 +59,13 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
     /// <inheritdoc />
     public void OnReceiveAbort(DicomAbortSource source, DicomAbortReason reason)
     {
-        Logger.Warn($"Abort from {source.ToString()} due to {reason.ToString()}");
+        Logger.LogWarning("Abort from {Source} due to {Reason}", source.ToString(), reason.ToString());
     }
 
     /// <inheritdoc />
     public void OnConnectionClosed(Exception exception)
     {
-        Logger.Info($"Connection closed {exception}\nAbout to process: {_seriesList}");
+        Logger.LogInformation("Connection closed {Exception}\\nAbout to process: {SeriesList}", exception, _seriesList);
         var existing = Directory.EnumerateFiles(_workdir).ToImmutableHashSet();
 
         // Run analysis script for each series in dataset
@@ -78,7 +78,7 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
             p.StartInfo.WorkingDirectory = _workdir;
             p.Start();
             p.WaitForExit();
-            Logger.Info($"Finished processing {Program.Exe} {series}");
+            Logger.LogInformation("Finished processing {Exe} {Series}", Program.Exe, series);
         }
 
         // Upload newly added files only
@@ -101,7 +101,7 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
         _senderAe = association.CallingAE;
         _senderIp = association.RemoteHost;
         _ourAe = association.CalledAE;
-        Logger.Info($"Connection from {association.CallingAE} calling us {association.CalledAE}");
+        Logger.LogInformation("Connection from {AssociationCallingAe} calling us {AssociationCalledAe}", association.CallingAE, association.CalledAE);
         foreach (var pc in association.PresentationContexts)
         {
             if (pc.AbstractSyntax == DicomUID.Verification
@@ -123,8 +123,7 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
             }
             else
             {
-                Logger.Warn(
-                    $"Requested abstract syntax {pc.AbstractSyntax} from {association.CallingAE} not supported");
+                Logger.LogWarning("Requested abstract syntax {PcAbstractSyntax} from {AssociationCallingAe} not supported", pc.AbstractSyntax, association.CallingAE);
                 pc.SetResult(DicomPresentationContextResult.RejectAbstractSyntaxNotSupported);
             }
         }
@@ -162,7 +161,7 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
         }
         catch (Exception e)
         {
-            Logger.Error($"Failed saving {request.SOPInstanceUID.UID} due to {e}");
+            Logger.LogError(e,"Failed saving {Uid}", request.SOPInstanceUID.UID);
             return new DicomCStoreResponse(request, DicomStatus.ProcessingFailure);
         }
     }
@@ -172,6 +171,6 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
     public async Task OnCStoreRequestExceptionAsync(string tempFileName, Exception e)
 #pragma warning restore 1998
     {
-        Logger.Error($"Error {e}");
+        Logger.LogError("Error {E}", e);
     }
 }
