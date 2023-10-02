@@ -16,7 +16,7 @@
       <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />
       <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="7.0.0" />
       <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="7.0.1" />
-      <PackageReference Include="SharpCompress" Version="0.34.0" />
+      <PackageReference Include="SharpCompress" Version="0.34.1" />
     </ItemGroup>
 
 </Project>
