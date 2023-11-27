@@ -14,7 +14,7 @@
       <PackageReference Include="fo-dicom" Version="5.1.1" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
       <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
-      <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="7.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="8.0.0" />
       <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="7.0.1" />
       <PackageReference Include="SharpCompress" Version="0.34.2" />
     </ItemGroup>
