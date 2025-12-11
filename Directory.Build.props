@@ -1,0 +1,15 @@
+<Project>
+  <!-- Import shared build standards -->
+  <Import Project="build-standards/Directory.Build.props.shared" />
+
+  <!-- PACSify-specific properties -->
+  <PropertyGroup>
+    <!-- Keep .NET 6.0 as target framework -->
+    <TargetFramework>net6.0</TargetFramework>
+
+    <!-- Repository metadata -->
+    <RepositoryUrl>https://github.com/jas88/PACSify</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/jas88/PACSify</PackageProjectUrl>
+    <Description>PACS utilities and tools</Description>
+  </PropertyGroup>
+</Project>
