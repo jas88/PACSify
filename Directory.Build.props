@@ -1,7 +1,4 @@
 <Project>
-  <!-- Import shared build standards -->
-  <Import Project="build-standards/Directory.Build.props.shared" />
-
   <!-- PACSify-specific properties -->
   <PropertyGroup>
     <!-- Keep .NET 6.0 as target framework -->
@@ -12,4 +9,14 @@
     <PackageProjectUrl>https://github.com/jas88/PACSify</PackageProjectUrl>
     <Description>PACS utilities and tools</Description>
   </PropertyGroup>
+
+  <!-- Import shared build standards AFTER setting properties -->
+  <Import Project="build-standards/Directory.Build.props.shared" />
+
+  <!-- Override package versions added by shared props -->
+  <ItemGroup>
+    <PackageReference Update="coverlet.collector" Version="6.0.4" />
+    <PackageReference Update="MinVer" Version="6.0.0" />
+    <PackageReference Update="DotNet.ReproducibleBuilds" Version="1.2.25" />
+  </ItemGroup>
 </Project>
