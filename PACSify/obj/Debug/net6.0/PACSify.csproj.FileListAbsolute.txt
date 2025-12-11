@@ -1,0 +1,6 @@
+/Users/jas88/Developer/Github/PACSify/PACSify/obj/Debug/net6.0/PACSify.csproj.AssemblyReference.cache
+/Users/jas88/Developer/Github/PACSify/PACSify/obj/Debug/net6.0/PACSify.GeneratedMSBuildEditorConfig.editorconfig
+/Users/jas88/Developer/Github/PACSify/PACSify/obj/Debug/net6.0/PACSify.AssemblyInfoInputs.cache
+/Users/jas88/Developer/Github/PACSify/PACSify/obj/Debug/net6.0/PACSify.AssemblyInfo.cs
+/Users/jas88/Developer/Github/PACSify/PACSify/obj/Debug/net6.0/PACSify.csproj.CoreCompileInputs.cache
+/Users/jas88/Developer/Github/PACSify/PACSify/obj/Debug/net6.0/PACSify.sourcelink.json
