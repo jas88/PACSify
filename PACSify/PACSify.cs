@@ -7,9 +7,9 @@ using Microsoft.Extensions.Hosting;
 
 namespace PACSify;
 
-class Program : BackgroundService
+sealed class Program : BackgroundService
 {
-    public static string Exe;
+    public static string Exe = string.Empty;
     static void Main(string[] args)
     { 
         Exe = args[0];

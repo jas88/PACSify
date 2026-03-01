@@ -31,7 +31,8 @@ public class UpdateFetcher
         if (user is not null && pass is not null)
             Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
                 Convert.ToBase64String(Encoding.UTF8.GetBytes($"{user}:{pass}")));
-        Update(url);
+        if (url is not null)
+            Update(url);
     }
 
     public static void Update(string url)
@@ -43,11 +44,12 @@ public class UpdateFetcher
             {
                 if (tar.Entry.IsDirectory) continue;
                 using var content = tar.OpenEntryStream();
-                if (tar.Entry.Key.EndsWith(".docker"))
+                if (tar.Entry.Key is null) continue;
+                if (tar.Entry.Key.EndsWith(".docker", StringComparison.Ordinal))
                 {
                     LoadDocker(content);
                 }
-                else if (tar.Entry.Key.Equals("pacsify.exe", StringComparison.InvariantCultureIgnoreCase))
+                else if (tar.Entry.Key.Equals("pacsify.exe", StringComparison.OrdinalIgnoreCase))
                 {
                     // Write to temporary file, then replace ourselves somehow:
                     var tmpname = $"{tar.Entry.Key}.tmp";
@@ -203,7 +205,6 @@ public class UpdateFetcher
         MinorMMC = 0x00000019,
         MinorNetworkConnectivity = 0x00000014,
         MinorNetworkCard = 0x00000009,
-        MinorOther = 0x00000000,
         MinorOtherDriver = 0x0000000e,
         MinorPowerSupply = 0x0000000a,
         MinorProcessor = 0x00000008,
@@ -261,8 +262,8 @@ public class UpdateFetcher
 
     [DllImport("advapi32.dll", SetLastError = true, CharSet=CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool LookupPrivilegeValue(string lpSystemName, 
-        string lpName, 
+    private static extern bool LookupPrivilegeValue(string? lpSystemName,
+        string lpName,
         out LUID lpLuid);
 
     [DllImport("kernel32.dll", SetLastError = true)]

@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using FellowOakDicom;
 using FellowOakDicom.Network;
 using FellowOakDicom.Network.Client;
@@ -13,24 +9,23 @@ using Microsoft.Extensions.Logging;
 namespace PACSify;
 
 // ReSharper disable once ClassNeverInstantiated.Global
-public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider, IDicomCStoreProvider
+public partial class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider, IDicomCStoreProvider
 {
     private readonly HashSet<string> _seriesList = new();
     private readonly string _workdir;
-    private string _senderAe;
-    private string _senderIp;
-    private string _ourAe;
+    private string _senderAe = string.Empty;
+    private string _senderIp = string.Empty;
+    private string _ourAe = string.Empty;
 
-    private static readonly DicomTransferSyntax[] AcceptedTransferSyntaxList = new DicomTransferSyntax[]
-    {
+    private static readonly DicomTransferSyntax[] AcceptedTransferSyntaxList =
+    [
         DicomTransferSyntax.ExplicitVRLittleEndian,
         DicomTransferSyntax.ExplicitVRBigEndian,
         DicomTransferSyntax.ImplicitVRLittleEndian
-    };
+    ];
 
-
-    private static readonly DicomTransferSyntax[] AcceptedImageTransferSyntaxList = new DicomTransferSyntax[]
-    {
+    private static readonly DicomTransferSyntax[] AcceptedImageTransferSyntaxList =
+    [
         // Lossless
         DicomTransferSyntax.JPEGLSLossless,
         DicomTransferSyntax.JPEG2000Lossless,
@@ -48,7 +43,28 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
         DicomTransferSyntax.ExplicitVRLittleEndian,
         DicomTransferSyntax.ExplicitVRBigEndian,
         DicomTransferSyntax.ImplicitVRLittleEndian
-    };
+    ];
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Abort from {Source} due to {Reason}")]
+    private static partial void LogAbort(ILogger logger, DicomAbortSource source, DicomAbortReason reason);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Connection closed, about to process: {SeriesList}")]
+    private static partial void LogConnectionClosed(ILogger logger, Exception? exception, HashSet<string> seriesList);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Finished processing {Exe} {Series}")]
+    private static partial void LogFinishedProcessing(ILogger logger, string exe, string series);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Connection from {CallingAe} calling us {CalledAe}")]
+    private static partial void LogConnection(ILogger logger, string callingAe, string calledAe);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Requested abstract syntax {AbstractSyntax} from {CallingAe} not supported")]
+    private static partial void LogUnsupportedSyntax(ILogger logger, DicomUID abstractSyntax, string callingAe);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed saving {Uid}")]
+    private static partial void LogSaveError(ILogger logger, Exception exception, string uid);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "C-STORE request exception: {Error}")]
+    private static partial void LogStoreRequestError(ILogger logger, string error);
 
     public StoreScp(INetworkStream stream, Encoding enc, ILogger log, DicomServiceDependencies deps) : base(stream, enc, log, deps)
     {
@@ -59,13 +75,13 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
     /// <inheritdoc />
     public void OnReceiveAbort(DicomAbortSource source, DicomAbortReason reason)
     {
-        Logger.LogWarning("Abort from {Source} due to {Reason}", source.ToString(), reason.ToString());
+        LogAbort(Logger, source, reason);
     }
 
     /// <inheritdoc />
     public void OnConnectionClosed(Exception exception)
     {
-        Logger.LogInformation("Connection closed {Exception}\\nAbout to process: {SeriesList}", exception, _seriesList);
+        LogConnectionClosed(Logger, exception, _seriesList);
         var existing = Directory.EnumerateFiles(_workdir).ToImmutableHashSet();
 
         // Run analysis script for each series in dataset
@@ -78,7 +94,7 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
             p.StartInfo.WorkingDirectory = _workdir;
             p.Start();
             p.WaitForExit();
-            Logger.LogInformation("Finished processing {Exe} {Series}", Program.Exe, series);
+            LogFinishedProcessing(Logger, Program.Exe, series);
         }
 
         // Upload newly added files only
@@ -101,7 +117,7 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
         _senderAe = association.CallingAE;
         _senderIp = association.RemoteHost;
         _ourAe = association.CalledAE;
-        Logger.LogInformation("Connection from {AssociationCallingAe} calling us {AssociationCalledAe}", association.CallingAE, association.CalledAE);
+        LogConnection(Logger, association.CallingAE, association.CalledAE);
         foreach (var pc in association.PresentationContexts)
         {
             if (pc.AbstractSyntax == DicomUID.Verification
@@ -123,7 +139,7 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
             }
             else
             {
-                Logger.LogWarning("Requested abstract syntax {PcAbstractSyntax} from {AssociationCallingAe} not supported", pc.AbstractSyntax, association.CallingAE);
+                LogUnsupportedSyntax(Logger, pc.AbstractSyntax, association.CallingAE);
                 pc.SetResult(DicomPresentationContextResult.RejectAbstractSyntaxNotSupported);
             }
         }
@@ -138,9 +154,9 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
     }
 
     /// <inheritdoc />
-#pragma warning disable 1998
+#pragma warning disable CS1998
     public async Task<DicomCEchoResponse> OnCEchoRequestAsync(DicomCEchoRequest request)
-#pragma warning restore 1998
+#pragma warning restore CS1998
     {
         return new DicomCEchoResponse(request, DicomStatus.Success);
     }
@@ -150,27 +166,23 @@ public class StoreScp : DicomService, IDicomServiceProvider, IDicomCEchoProvider
     {
         try
         {
-            //var study = request.Dataset.GetSingleValue<string>(DicomTag.StudyInstanceUID).Trim();
             _seriesList.Add(request.Dataset.GetSingleValue<string>(DicomTag.SeriesInstanceUID));
             var inst = request.SOPInstanceUID.UID;
-            //var path = Path.Combine(Path.GetFullPath("output"), study);
-            //Directory.CreateDirectory(path);
-            //path = Path.Combine(path, $"{inst}.dcm");
             await request.File.SaveAsync(Path.Combine(_workdir, $"{inst}.dcm"));
             return new DicomCStoreResponse(request, DicomStatus.Success);
         }
         catch (Exception e)
         {
-            Logger.LogError(e,"Failed saving {Uid}", request.SOPInstanceUID.UID);
+            LogSaveError(Logger, e, request.SOPInstanceUID.UID);
             return new DicomCStoreResponse(request, DicomStatus.ProcessingFailure);
         }
     }
 
     /// <inheritdoc />
-#pragma warning disable 1998
+#pragma warning disable CS1998
     public async Task OnCStoreRequestExceptionAsync(string tempFileName, Exception e)
-#pragma warning restore 1998
+#pragma warning restore CS1998
     {
-        Logger.LogError("Error {E}", e);
+        LogStoreRequestError(Logger, e.ToString());
     }
 }
