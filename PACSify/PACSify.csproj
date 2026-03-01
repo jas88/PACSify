@@ -2,9 +2,8 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net$(NETCoreAppMaximumVersion)</TargetFramework>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-        <LangVersion>10</LangVersion>
         <PublishSingleFile>true</PublishSingleFile>
         <DebugType>embedded</DebugType>
     	<UseAppHost>true</UseAppHost>
