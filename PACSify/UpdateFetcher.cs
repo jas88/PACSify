@@ -43,15 +43,17 @@ public class UpdateFetcher
             foreach (var entry in tar.Entries())
             {
                 if (entry.IsDirectory) continue;
-                if (entry.Name.EndsWith(".docker", StringComparison.Ordinal))
+                var name = Path.GetFileName(entry.Name);
+                if (string.IsNullOrEmpty(name)) continue;
+                if (name.EndsWith(".docker", StringComparison.Ordinal))
                 {
                     using var content = entry.Stream;
                     LoadDocker(content);
                 }
-                else if (entry.Name.Equals("pacsify.exe", StringComparison.OrdinalIgnoreCase))
+                else if (name.Equals("pacsify.exe", StringComparison.OrdinalIgnoreCase))
                 {
                     // Write to temporary file, then replace ourselves somehow:
-                    var tmpname = $"{entry.Name}.tmp";
+                    var tmpname = $"{name}.tmp";
                     using (var tmp = File.Create(tmpname))
                     {
                         using var content = entry.Stream;
@@ -59,20 +61,20 @@ public class UpdateFetcher
                     }
                     try
                     {
-                        File.Replace(tmpname, entry.Name, $"{entry.Name}.bak");
+                        File.Replace(tmpname, name, $"{name}.bak");
                     }
                     catch (Exception)
                     {
                         if (!OperatingSystem.IsWindows())
                             throw;
-                        if (!MoveFileEx(tmpname, entry.Name,
+                        if (!MoveFileEx(tmpname, name,
                                 MoveFileFlags.MOVEFILE_REPLACE_EXISTING | MoveFileFlags.MOVEFILE_DELAY_UNTIL_REBOOT))
                             throw new Win32Exception(Marshal.GetLastWin32Error());
                     }
                 }
                 else
                 {
-                    using var output = File.Create(entry.Name);
+                    using var output = File.Create(name);
                     using var content = entry.Stream;
                     content.CopyTo(output);
                 }
