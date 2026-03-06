@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
 using Microsoft.Win32;
-using SharpCompress.Readers;
+using LibArchive.Net;
 
 namespace PACSify;
 
@@ -39,39 +39,41 @@ public class UpdateFetcher
     {
         try
         {
-            using var tar = ReaderFactory.Open(Client.GetStreamAsync($"{url}?op=get").Result);
-            while (tar.MoveToNextEntry())
+            using var tar = new LibArchiveReader(Client.GetStreamAsync($"{url}?op=get").Result);
+            foreach (var entry in tar.Entries())
             {
-                if (tar.Entry.IsDirectory) continue;
-                using var content = tar.OpenEntryStream();
-                if (tar.Entry.Key is null) continue;
-                if (tar.Entry.Key.EndsWith(".docker", StringComparison.Ordinal))
+                if (entry.IsDirectory) continue;
+                if (entry.Name.EndsWith(".docker", StringComparison.Ordinal))
                 {
+                    using var content = entry.Stream;
                     LoadDocker(content);
                 }
-                else if (tar.Entry.Key.Equals("pacsify.exe", StringComparison.OrdinalIgnoreCase))
+                else if (entry.Name.Equals("pacsify.exe", StringComparison.OrdinalIgnoreCase))
                 {
                     // Write to temporary file, then replace ourselves somehow:
-                    var tmpname = $"{tar.Entry.Key}.tmp";
-                    using var tmp = File.Create(tmpname);
-                    content.CopyTo(tmp);
-                    tmp.Close();
+                    var tmpname = $"{entry.Name}.tmp";
+                    using (var tmp = File.Create(tmpname))
+                    {
+                        using var content = entry.Stream;
+                        content.CopyTo(tmp);
+                    }
                     try
                     {
-                        File.Replace(tmpname, tar.Entry.Key, $"{tar.Entry.Key}.bak");
+                        File.Replace(tmpname, entry.Name, $"{entry.Name}.bak");
                     }
                     catch (Exception)
                     {
                         if (!OperatingSystem.IsWindows())
                             throw;
-                        if (!MoveFileEx(tmpname, tar.Entry.Key,
+                        if (!MoveFileEx(tmpname, entry.Name,
                                 MoveFileFlags.MOVEFILE_REPLACE_EXISTING | MoveFileFlags.MOVEFILE_DELAY_UNTIL_REBOOT))
                             throw new Win32Exception(Marshal.GetLastWin32Error());
                     }
                 }
                 else
                 {
-                    using var output = File.Create(tar.Entry.Key);
+                    using var output = File.Create(entry.Name);
+                    using var content = entry.Stream;
                     content.CopyTo(output);
                 }
             }

@@ -16,7 +16,7 @@
       <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.2" />
       <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.2" />
       <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.0" />
-      <PackageReference Include="SharpCompress" Version="0.39.0" />
+      <PackageReference Include="LibArchive.Net" Version="0.3.0" />
     </ItemGroup>
 
 </Project>
