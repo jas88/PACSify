@@ -13,9 +13,9 @@
     <ItemGroup>
       <PackageReference Include="fo-dicom" Version="5.2.5" />
       <PackageReference Include="LibArchive.Net" Version="0.3.0" />
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
-      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3" />
-      <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.3" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.4" />
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.4" />
+      <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.4" />
       <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.3" />
     </ItemGroup>
 
