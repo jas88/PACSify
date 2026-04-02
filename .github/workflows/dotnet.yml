@@ -20,7 +20,7 @@ jobs:
           ls -lR coverage
           mv coverage/*/* coverage.lcov
       - name: Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.lcov
