@@ -7,13 +7,19 @@
     <Description>PACS utilities and tools</Description>
   </PropertyGroup>
 
+  <!-- Mark test projects before the shared import so MTP settings apply
+       (shared path detection only matches /test/ or /tests/ directories) -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Test'))">
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
   <!-- Import shared build standards AFTER setting properties -->
   <Import Project="build-standards/Directory.Build.props.shared" />
 
   <!-- Override package versions added by shared props -->
   <ItemGroup>
-    <PackageReference Update="coverlet.collector" Version="10.1.1" />
-    <PackageReference Update="MinVer" Version="6.0.0" />
-    <PackageReference Update="DotNet.ReproducibleBuilds" Version="1.2.25" />
+    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="18.4.1" />
+    <PackageReference Update="MinVer" Version="7.0.0" />
+    <PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />
   </ItemGroup>
 </Project>
