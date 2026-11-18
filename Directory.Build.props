@@ -18,7 +18,7 @@
 
   <!-- Override package versions added by shared props -->
   <ItemGroup>
-    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="18.4.1" />
+    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
     <PackageReference Update="MinVer" Version="7.0.0" />
     <PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />
   </ItemGroup>
