@@ -39,7 +39,9 @@ public class UpdateFetcher
     {
         try
         {
-            using var tar = new LibArchiveReader(Client.GetStreamAsync($"{url}?op=get").Result);
+            // GetAwaiter().GetResult() rather than .Result, so that a failure arrives as itself rather
+            // than wrapped in an AggregateException, and the 404 check below can see it
+            using var tar = new LibArchiveReader(Client.GetStreamAsync($"{url}?op=get").GetAwaiter().GetResult());
             foreach (var entry in tar.Entries())
             {
                 if (entry.IsDirectory)

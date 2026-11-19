@@ -46,6 +46,18 @@ public class UpdateFetcherTests
     }
 
     [Test]
+    public void UpdateSendsNoReportWhenNoUpdateIsPending()
+    {
+        // The update server answers 404 when it has no update for this client
+        using var server = new UpdateServer(HttpStatusCode.NotFound, []);
+
+        UpdateFetcher.Update(server.Url);
+
+        // Update waits for any report it sends, so an error report would already be logged
+        Assert.That(server.Ops, Is.EqualTo("get"));
+    }
+
+    [Test]
     public void UpdateDoesNotThrowWhenTheUpdateServerCannotBeReached()
     {
         // Nothing listens on this port, so both the update and its error report fail to connect.
