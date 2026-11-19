@@ -8,15 +8,15 @@ using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
-using Microsoft.Win32;
 using LibArchive.Net;
+using Microsoft.Win32;
 
 namespace PACSify;
 
 public class UpdateFetcher
 {
     private static readonly HttpClient Client = new();
-    private const string regPath=@"HKEY_LOCAL_MACHINE\Software\CMIH";
+    private const string regPath = @"HKEY_LOCAL_MACHINE\Software\CMIH";
 
     public static void AutoUpdate()
     {
@@ -25,7 +25,7 @@ public class UpdateFetcher
             Update("https://us.deadnode.org/cmihupdate/");
             return;
         }
-        var url=Registry.GetValue(regPath, "UpdateHref", null) as string;
+        var url = Registry.GetValue(regPath, "UpdateHref", null) as string;
         var user = Registry.GetValue(regPath, "UpdateUser", null) as string;
         var pass = Registry.GetValue(regPath, "UpdatePass", null) as string;
         if (user is not null && pass is not null)
@@ -42,9 +42,11 @@ public class UpdateFetcher
             using var tar = new LibArchiveReader(Client.GetStreamAsync($"{url}?op=get").Result);
             foreach (var entry in tar.Entries())
             {
-                if (entry.IsDirectory) continue;
+                if (entry.IsDirectory)
+                    continue;
                 var name = Path.GetFileName(entry.Name);
-                if (string.IsNullOrEmpty(name)) continue;
+                if (string.IsNullOrEmpty(name))
+                    continue;
                 if (name.EndsWith(".docker", StringComparison.Ordinal))
                 {
                     using var content = entry.Stream;
@@ -86,9 +88,9 @@ public class UpdateFetcher
         {
             if (e is HttpRequestException { StatusCode: HttpStatusCode.NotFound })
                 return;
-            var data=Encoding.UTF8.GetBytes(e.Message + "\n" + e.StackTrace);
+            var data = Encoding.UTF8.GetBytes(e.Message + "\n" + e.StackTrace);
             using var body = new ReadOnlyMemoryContent(data);
-            Client.PostAsync($"{url}?op=error",body);
+            Client.PostAsync($"{url}?op=error", body);
         }
     }
 
@@ -264,7 +266,7 @@ public class UpdateFetcher
         UInt32 DesiredAccess,
         out IntPtr TokenHandle);
 
-    [DllImport("advapi32.dll", SetLastError = true, CharSet=CharSet.Unicode)]
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool LookupPrivilegeValue(string? lpSystemName,
         string lpName,
@@ -277,7 +279,7 @@ public class UpdateFetcher
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool AdjustTokenPrivileges(IntPtr TokenHandle,
-        [MarshalAs(UnmanagedType.Bool)]bool DisableAllPrivileges,
+        [MarshalAs(UnmanagedType.Bool)] bool DisableAllPrivileges,
         ref TOKEN_PRIVILEGES NewState,
         UInt32 Zero,
         IntPtr Null1,
@@ -286,16 +288,16 @@ public class UpdateFetcher
     [Flags]
     enum MoveFileFlags
     {
-        MOVEFILE_REPLACE_EXISTING           = 0x00000001,
-        MOVEFILE_COPY_ALLOWED               = 0x00000002,
-        MOVEFILE_DELAY_UNTIL_REBOOT         = 0x00000004,
-        MOVEFILE_WRITE_THROUGH              = 0x00000008,
-        MOVEFILE_CREATE_HARDLINK            = 0x00000010,
-        MOVEFILE_FAIL_IF_NOT_TRACKABLE      = 0x00000020
+        MOVEFILE_REPLACE_EXISTING = 0x00000001,
+        MOVEFILE_COPY_ALLOWED = 0x00000002,
+        MOVEFILE_DELAY_UNTIL_REBOOT = 0x00000004,
+        MOVEFILE_WRITE_THROUGH = 0x00000008,
+        MOVEFILE_CREATE_HARDLINK = 0x00000010,
+        MOVEFILE_FAIL_IF_NOT_TRACKABLE = 0x00000020
     }
 
     [return: MarshalAs(UnmanagedType.Bool)]
-    [DllImport("kernel32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName,
         MoveFileFlags dwFlags);
 }
