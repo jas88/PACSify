@@ -95,15 +95,22 @@ public class UpdateFetcher
 
     /// <summary>
     /// Sends the outcome of an update to the update server, and waits for the answer so that the
-    /// report has been sent before its body is disposed and Update returns. If the server can't be
-    /// reached, Update carries on without the report: there is nowhere else to report to.
+    /// report has been sent before its body is disposed and Update returns. If the report can't be
+    /// sent (the update URL is not an absolute HTTP or HTTPS URL, or the server can't be reached),
+    /// Update carries on without it: there is nowhere else to report to.
     /// </summary>
     private static void Report(string url, string op, byte[] data)
     {
+        // A malformed, relative or non-HTTP update URL leaves nowhere to send the report, and
+        // HttpClient would throw UriFormatException, InvalidOperationException or NotSupportedException
+        if (!Uri.TryCreate($"{url}?op={op}", UriKind.Absolute, out var reportUri)
+            || (reportUri.Scheme != Uri.UriSchemeHttp && reportUri.Scheme != Uri.UriSchemeHttps))
+            return;
+
         using var body = new ReadOnlyMemoryContent(data);
         try
         {
-            using var response = Client.PostAsync($"{url}?op={op}", body).GetAwaiter().GetResult();
+            using var response = Client.PostAsync(reportUri, body).GetAwaiter().GetResult();
         }
         catch (Exception reportFailure) when (reportFailure is HttpRequestException or TaskCanceledException)
         {

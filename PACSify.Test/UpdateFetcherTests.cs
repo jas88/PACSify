@@ -64,6 +64,15 @@ public class UpdateFetcherTests
         Assert.DoesNotThrow(() => UpdateFetcher.Update($"http://127.0.0.1:{FreePort()}/"));
     }
 
+    [TestCase("cmihupdate/", Description = "relative")]
+    [TestCase("http://[::1/cmihupdate/", Description = "malformed")]
+    [TestCase("ftp://127.0.0.1/cmihupdate/", Description = "not HTTP")]
+    public void UpdateDoesNotThrowWhenTheUpdateUrlIsInvalid(string url)
+    {
+        // The update request fails, and so would its error report: Update must carry on regardless.
+        Assert.DoesNotThrow(() => UpdateFetcher.Update(url));
+    }
+
     private static int FreePort()
     {
         using var probe = new TcpListener(IPAddress.Loopback, 0);
