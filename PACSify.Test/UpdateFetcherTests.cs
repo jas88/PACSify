@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Formats.Tar;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -11,19 +12,37 @@ public class UpdateFetcherTests
     [Test]
     public void UpdateWaitsForTheErrorReportToBeSent()
     {
-        var url = $"http://127.0.0.1:{FreePort()}/";
-        using var listener = new HttpListener();
-        listener.Prefixes.Add(url);
-        listener.Start();
-        var reports = new ConcurrentQueue<string>();
-        _ = ServeAsync(listener, reports);
+        using var server = new UpdateServer(HttpStatusCode.InternalServerError, []);
 
-        UpdateFetcher.Update(url);
+        UpdateFetcher.Update(server.Url);
 
-        // The server records an error report only after a delay, just before it answers,
+        // The server logs a report only once it is about to answer it, after a delay,
         // so the report is only there now if Update waited for the answer.
-        Assert.That(reports, Has.Count.EqualTo(1));
-        Assert.That(reports.Single(), Does.Contain("500"));
+        Assert.That(server.Ops, Is.EqualTo("get error"));
+        Assert.That(server.Requests.Last().Body, Does.Contain("500"));
+    }
+
+    [Test]
+    public void UpdateExtractsTheUpdateAndWaitsForTheSuccessReport()
+    {
+        using var server = new UpdateServer(HttpStatusCode.OK, TarWith("readme.txt", "updated"));
+        var workDir = Directory.CreateTempSubdirectory("PACSify.Test-");
+        var originalDir = Environment.CurrentDirectory;
+        try
+        {
+            // Update extracts the update into the current directory
+            Environment.CurrentDirectory = workDir.FullName;
+            UpdateFetcher.Update(server.Url);
+            Environment.CurrentDirectory = originalDir;
+
+            Assert.That(File.ReadAllText(Path.Combine(workDir.FullName, "readme.txt")), Is.EqualTo("updated"));
+            Assert.That(server.Ops, Is.EqualTo("get success"));
+        }
+        finally
+        {
+            Environment.CurrentDirectory = originalDir;
+            workDir.Delete(true);
+        }
     }
 
     [Test]
@@ -40,34 +59,75 @@ public class UpdateFetcherTests
         return ((IPEndPoint)probe.LocalEndpoint).Port;
     }
 
-    /// <summary>
-    /// Answers ?op=get with a 500 so that the update fails, and records the body of each
-    /// ?op=error report 300ms after receiving it, just before answering it.
-    /// </summary>
-    private static async Task ServeAsync(HttpListener listener, ConcurrentQueue<string> reports)
+    private static byte[] TarWith(string name, string content)
     {
-        try
+        using var archive = new MemoryStream();
+        using (var writer = new TarWriter(archive, TarEntryFormat.Ustar, leaveOpen: true))
         {
-            while (true)
-            {
-                var context = await listener.GetContextAsync();
-                using var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8);
-                var body = await reader.ReadToEndAsync();
-                if (context.Request.QueryString["op"] == "error")
-                {
-                    await Task.Delay(300);
-                    reports.Enqueue(body);
-                }
-                else
-                {
-                    context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                }
-                context.Response.Close();
-            }
+            using var data = new MemoryStream(Encoding.UTF8.GetBytes(content));
+            writer.WriteEntry(new UstarTarEntry(TarEntryType.RegularFile, name) { DataStream = data });
         }
-        catch (Exception e) when (e is HttpListenerException or ObjectDisposedException or InvalidOperationException)
+        return archive.ToArray();
+    }
+
+    /// <summary>
+    /// A stand-in for the update server on a free loopback port. It answers ?op=get with the given
+    /// status and body, and logs every request's op and body in order. It logs a report (any other
+    /// op) only 300ms after receiving it, just before answering it, so a report is in
+    /// <see cref="Requests"/> only if the client waited for the answer.
+    /// </summary>
+    private sealed class UpdateServer : IDisposable
+    {
+        private readonly HttpListener _listener = new();
+
+        public UpdateServer(HttpStatusCode getStatus, byte[] getBody)
         {
-            // The listener was closed at the end of the test.
+            Url = $"http://127.0.0.1:{FreePort()}/";
+            _listener.Prefixes.Add(Url);
+            _listener.Start();
+            _ = ServeAsync(getStatus, getBody);
+        }
+
+        public string Url { get; }
+
+        public ConcurrentQueue<(string Op, string Body)> Requests { get; } = new();
+
+        /// <summary>
+        /// The op of each request in <see cref="Requests"/>, separated by spaces.
+        /// </summary>
+        public string Ops => string.Join(' ', Requests.Select(static r => r.Op));
+
+        public void Dispose() => ((IDisposable)_listener).Dispose();
+
+        private async Task ServeAsync(HttpStatusCode getStatus, byte[] getBody)
+        {
+            try
+            {
+                while (true)
+                {
+                    var context = await _listener.GetContextAsync();
+                    var op = context.Request.QueryString["op"] ?? string.Empty;
+                    using var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8);
+                    var body = await reader.ReadToEndAsync();
+                    if (op == "get")
+                    {
+                        Requests.Enqueue((op, body));
+                        context.Response.StatusCode = (int)getStatus;
+                        context.Response.ContentLength64 = getBody.Length;
+                        await context.Response.OutputStream.WriteAsync(getBody);
+                    }
+                    else
+                    {
+                        await Task.Delay(300);
+                        Requests.Enqueue((op, body));
+                    }
+                    context.Response.Close();
+                }
+            }
+            catch (Exception e) when (e is HttpListenerException or ObjectDisposedException or InvalidOperationException)
+            {
+                // The listener was closed at the end of the test.
+            }
         }
     }
 }

@@ -81,24 +81,31 @@ public class UpdateFetcher
                     content.CopyTo(output);
                 }
             }
-            using var body = new ReadOnlyMemoryContent(Array.Empty<byte>());
-            Client.PostAsync($"{url}?op=success", body);
+            Report(url, "success", []);
         }
         catch (Exception e)
         {
             if (e is HttpRequestException { StatusCode: HttpStatusCode.NotFound })
                 return;
-            var data = Encoding.UTF8.GetBytes(e.Message + "\n" + e.StackTrace);
-            using var body = new ReadOnlyMemoryContent(data);
-            try
-            {
-                // Wait for the report to be sent before body is disposed and Update returns
-                using var response = Client.PostAsync($"{url}?op=error", body).GetAwaiter().GetResult();
-            }
-            catch (Exception reportFailure) when (reportFailure is HttpRequestException or TaskCanceledException)
-            {
-                // The update server can't be reached, so there is nowhere to report to: carry on without it
-            }
+            Report(url, "error", Encoding.UTF8.GetBytes(e.Message + "\n" + e.StackTrace));
+        }
+    }
+
+    /// <summary>
+    /// Sends the outcome of an update to the update server, and waits for the answer so that the
+    /// report has been sent before its body is disposed and Update returns. If the server can't be
+    /// reached, Update carries on without the report: there is nowhere else to report to.
+    /// </summary>
+    private static void Report(string url, string op, byte[] data)
+    {
+        using var body = new ReadOnlyMemoryContent(data);
+        try
+        {
+            using var response = Client.PostAsync($"{url}?op={op}", body).GetAwaiter().GetResult();
+        }
+        catch (Exception reportFailure) when (reportFailure is HttpRequestException or TaskCanceledException)
+        {
+            // The update server can't be reached: carry on without the report
         }
     }
 
