@@ -44,7 +44,7 @@ repos:
         language: system
         types: [c#]
         pass_filenames: false
-        stages: [push]
+        stages: [pre-push]
 
 # Commit message format (conventional commits)
   - repo: https://github.com/compilerla/conventional-pre-commit
