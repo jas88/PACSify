@@ -90,7 +90,15 @@ public class UpdateFetcher
                 return;
             var data = Encoding.UTF8.GetBytes(e.Message + "\n" + e.StackTrace);
             using var body = new ReadOnlyMemoryContent(data);
-            Client.PostAsync($"{url}?op=error", body);
+            try
+            {
+                // Wait for the report to be sent before body is disposed and Update returns
+                using var response = Client.PostAsync($"{url}?op=error", body).GetAwaiter().GetResult();
+            }
+            catch (Exception reportFailure) when (reportFailure is HttpRequestException or TaskCanceledException)
+            {
+                // The update server can't be reached, so there is nowhere to report to: carry on without it
+            }
         }
     }
 
