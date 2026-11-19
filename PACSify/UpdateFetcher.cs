@@ -16,7 +16,7 @@ namespace PACSify;
 public class UpdateFetcher
 {
     private static readonly HttpClient Client = new();
-    private const string regPath = @"HKEY_LOCAL_MACHINE\Software\CMIH";
+    private const string RegPath = @"HKEY_LOCAL_MACHINE\Software\CMIH";
 
     public static void AutoUpdate()
     {
@@ -25,9 +25,9 @@ public class UpdateFetcher
             Update("https://us.deadnode.org/cmihupdate/");
             return;
         }
-        var url = Registry.GetValue(regPath, "UpdateHref", null) as string;
-        var user = Registry.GetValue(regPath, "UpdateUser", null) as string;
-        var pass = Registry.GetValue(regPath, "UpdatePass", null) as string;
+        var url = Registry.GetValue(RegPath, "UpdateHref", null) as string;
+        var user = Registry.GetValue(RegPath, "UpdateUser", null) as string;
+        var pass = Registry.GetValue(RegPath, "UpdatePass", null) as string;
         if (user is not null && pass is not null)
             Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
                 Convert.ToBase64String(Encoding.UTF8.GetBytes($"{user}:{pass}")));
@@ -118,7 +118,7 @@ public class UpdateFetcher
         {
             // get process token
             if (!OpenProcessToken(Process.GetCurrentProcess().Handle,
-                TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES,
+                TokenQuery | TokenAdjustPrivileges,
                 out tokenHandle))
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error(),
@@ -129,10 +129,10 @@ public class UpdateFetcher
             TOKEN_PRIVILEGES tokenPrivs = new TOKEN_PRIVILEGES();
             tokenPrivs.PrivilegeCount = 1;
             tokenPrivs.Privileges = new LUID_AND_ATTRIBUTES[1];
-            tokenPrivs.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+            tokenPrivs.Privileges[0].Attributes = SePrivilegeEnabled;
 
             if (!LookupPrivilegeValue(null,
-                SE_SHUTDOWN_NAME,
+                SeShutdownName,
                 out tokenPrivs.Privileges[0].Luid))
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error(),
@@ -250,10 +250,10 @@ public class UpdateFetcher
         public LUID_AND_ATTRIBUTES[] Privileges;
     }
 
-    private const UInt32 TOKEN_QUERY = 0x0008;
-    private const UInt32 TOKEN_ADJUST_PRIVILEGES = 0x0020;
-    private const UInt32 SE_PRIVILEGE_ENABLED = 0x00000002;
-    private const string SE_SHUTDOWN_NAME = "SeShutdownPrivilege";
+    private const UInt32 TokenQuery = 0x0008;
+    private const UInt32 TokenAdjustPrivileges = 0x0020;
+    private const UInt32 SePrivilegeEnabled = 0x00000002;
+    private const string SeShutdownName = "SeShutdownPrivilege";
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
