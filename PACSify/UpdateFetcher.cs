@@ -107,7 +107,7 @@ public class UpdateFetcher
         image.CopyTo(proc.StandardInput.BaseStream);
         proc.WaitForExit();
     }
-    
+
     public static void Reboot()
     {
         IntPtr tokenHandle = IntPtr.Zero;
@@ -151,8 +151,8 @@ public class UpdateFetcher
 
             // reboot
             if (!ExitWindowsEx(ExitWindows.Reboot,
-                    ShutdownReason.MajorApplication | 
-            ShutdownReason.MinorInstallation | 
+                    ShutdownReason.MajorApplication |
+            ShutdownReason.MinorInstallation |
             ShutdownReason.FlagPlanned))
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error(),
@@ -255,13 +255,13 @@ public class UpdateFetcher
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool ExitWindowsEx(ExitWindows uFlags, 
+    private static extern bool ExitWindowsEx(ExitWindows uFlags,
         ShutdownReason dwReason);
 
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool OpenProcessToken(IntPtr ProcessHandle, 
-        UInt32 DesiredAccess, 
+    private static extern bool OpenProcessToken(IntPtr ProcessHandle,
+        UInt32 DesiredAccess,
         out IntPtr TokenHandle);
 
     [DllImport("advapi32.dll", SetLastError = true, CharSet=CharSet.Unicode)]
@@ -293,7 +293,7 @@ public class UpdateFetcher
         MOVEFILE_CREATE_HARDLINK            = 0x00000010,
         MOVEFILE_FAIL_IF_NOT_TRACKABLE      = 0x00000020
     }
-    
+
     [return: MarshalAs(UnmanagedType.Bool)]
     [DllImport("kernel32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
     static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName,

@@ -11,7 +11,7 @@ sealed class Program : BackgroundService
 {
     public static string Exe = string.Empty;
     static void Main(string[] args)
-    { 
+    {
         Exe = args[0];
         UpdateFetcher.AutoUpdate();
         Host.CreateDefaultBuilder(args).UseWindowsService().UseSystemd()
