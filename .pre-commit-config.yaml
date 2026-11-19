@@ -35,14 +35,14 @@ repos:
         name: dotnet format
         entry: dotnet format --verify-no-changes
         language: system
-        types: [csharp]
+        types: [c#]
         pass_filenames: false
 
       - id: dotnet-build
         name: dotnet build
         entry: dotnet build --no-restore
         language: system
-        types: [csharp]
+        types: [c#]
         pass_filenames: false
         stages: [push]
 
