@@ -59,6 +59,27 @@ dotnet_style_prefer_compound_assignment = true:suggestion
 dotnet_style_prefer_simplified_interpolation = true:suggestion
 
 # Naming conventions
+# Private constants and private static readonly fields are PascalCase, as in FAnsiSql.
+# These rules are more specific than private_fields, so they take precedence over it.
+dotnet_naming_rule.private_constants_should_be_pascal_case.severity = warning
+dotnet_naming_rule.private_constants_should_be_pascal_case.symbols = private_constants
+dotnet_naming_rule.private_constants_should_be_pascal_case.style = pascal_case
+
+dotnet_naming_symbols.private_constants.applicable_kinds = field
+dotnet_naming_symbols.private_constants.applicable_accessibilities = private
+dotnet_naming_symbols.private_constants.required_modifiers = const
+
+dotnet_naming_rule.private_static_readonly_fields_should_be_pascal_case.severity = warning
+dotnet_naming_rule.private_static_readonly_fields_should_be_pascal_case.symbols = private_static_readonly_fields
+dotnet_naming_rule.private_static_readonly_fields_should_be_pascal_case.style = pascal_case
+
+dotnet_naming_symbols.private_static_readonly_fields.applicable_kinds = field
+dotnet_naming_symbols.private_static_readonly_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_static_readonly_fields.required_modifiers = static, readonly
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+# Other private fields are _camelCase
 dotnet_naming_rule.private_fields_should_be_camel_case.severity = warning
 dotnet_naming_rule.private_fields_should_be_camel_case.symbols = private_fields
 dotnet_naming_rule.private_fields_should_be_camel_case.style = camel_case_underscore
@@ -103,3 +124,8 @@ dotnet_diagnostic.CA1062.severity = none  # Validate arguments of public methods
 dotnet_diagnostic.CA1303.severity = none  # Do not pass literals as localized parameters
 dotnet_diagnostic.CA1812.severity = none  # Avoid uninstantiated internal classes (DI containers)
 dotnet_diagnostic.CA2007.severity = none  # ConfigureAwait (not needed in apps)
+
+# Test code: async test methods keep their descriptive names, so the Async suffix rule doesn't apply.
+# Matches tests/, *Tests/ and *Test/ folders (e.g. tests/X.Tests, SynthEHRTests, PACSify.Test) at any depth.
+[{tests,*Tests,*Test,**/tests,**/*Tests,**/*Test}/**.cs]
+dotnet_naming_rule.async_methods_should_end_with_async.severity = none

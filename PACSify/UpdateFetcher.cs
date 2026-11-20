@@ -8,15 +8,15 @@ using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
-using Microsoft.Win32;
 using LibArchive.Net;
+using Microsoft.Win32;
 
 namespace PACSify;
 
 public class UpdateFetcher
 {
     private static readonly HttpClient Client = new();
-    private const string regPath=@"HKEY_LOCAL_MACHINE\Software\CMIH";
+    private const string RegPath = @"HKEY_LOCAL_MACHINE\Software\CMIH";
 
     public static void AutoUpdate()
     {
@@ -25,9 +25,9 @@ public class UpdateFetcher
             Update("https://us.deadnode.org/cmihupdate/");
             return;
         }
-        var url=Registry.GetValue(regPath, "UpdateHref", null) as string;
-        var user = Registry.GetValue(regPath, "UpdateUser", null) as string;
-        var pass = Registry.GetValue(regPath, "UpdatePass", null) as string;
+        var url = Registry.GetValue(RegPath, "UpdateHref", null) as string;
+        var user = Registry.GetValue(RegPath, "UpdateUser", null) as string;
+        var pass = Registry.GetValue(RegPath, "UpdatePass", null) as string;
         if (user is not null && pass is not null)
             Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
                 Convert.ToBase64String(Encoding.UTF8.GetBytes($"{user}:{pass}")));
@@ -39,12 +39,16 @@ public class UpdateFetcher
     {
         try
         {
-            using var tar = new LibArchiveReader(Client.GetStreamAsync($"{url}?op=get").Result);
+            // GetAwaiter().GetResult() rather than .Result, so that a failure arrives as itself rather
+            // than wrapped in an AggregateException, and the 404 check below can see it
+            using var tar = new LibArchiveReader(Client.GetStreamAsync($"{url}?op=get").GetAwaiter().GetResult());
             foreach (var entry in tar.Entries())
             {
-                if (entry.IsDirectory) continue;
+                if (entry.IsDirectory)
+                    continue;
                 var name = Path.GetFileName(entry.Name);
-                if (string.IsNullOrEmpty(name)) continue;
+                if (string.IsNullOrEmpty(name))
+                    continue;
                 if (name.EndsWith(".docker", StringComparison.Ordinal))
                 {
                     using var content = entry.Stream;
@@ -79,16 +83,38 @@ public class UpdateFetcher
                     content.CopyTo(output);
                 }
             }
-            using var body = new ReadOnlyMemoryContent(Array.Empty<byte>());
-            Client.PostAsync($"{url}?op=success", body);
+            Report(url, "success", []);
         }
         catch (Exception e)
         {
             if (e is HttpRequestException { StatusCode: HttpStatusCode.NotFound })
                 return;
-            var data=Encoding.UTF8.GetBytes(e.Message + "\n" + e.StackTrace);
-            using var body = new ReadOnlyMemoryContent(data);
-            Client.PostAsync($"{url}?op=error",body);
+            Report(url, "error", Encoding.UTF8.GetBytes(e.Message + "\n" + e.StackTrace));
+        }
+    }
+
+    /// <summary>
+    /// Sends the outcome of an update to the update server, and waits for the answer so that the
+    /// report has been sent before its body is disposed and Update returns. If the report can't be
+    /// sent (the update URL is not an absolute HTTP or HTTPS URL, or the server can't be reached),
+    /// Update carries on without it: there is nowhere else to report to.
+    /// </summary>
+    private static void Report(string url, string op, byte[] data)
+    {
+        // A malformed, relative or non-HTTP update URL leaves nowhere to send the report, and
+        // HttpClient would throw UriFormatException, InvalidOperationException or NotSupportedException
+        if (!Uri.TryCreate($"{url}?op={op}", UriKind.Absolute, out var reportUri)
+            || (reportUri.Scheme != Uri.UriSchemeHttp && reportUri.Scheme != Uri.UriSchemeHttps))
+            return;
+
+        using var body = new ReadOnlyMemoryContent(data);
+        try
+        {
+            using var response = Client.PostAsync(reportUri, body).GetAwaiter().GetResult();
+        }
+        catch (Exception reportFailure) when (reportFailure is HttpRequestException or TaskCanceledException)
+        {
+            // The update server can't be reached: carry on without the report
         }
     }
 
@@ -107,7 +133,7 @@ public class UpdateFetcher
         image.CopyTo(proc.StandardInput.BaseStream);
         proc.WaitForExit();
     }
-    
+
     public static void Reboot()
     {
         IntPtr tokenHandle = IntPtr.Zero;
@@ -116,7 +142,7 @@ public class UpdateFetcher
         {
             // get process token
             if (!OpenProcessToken(Process.GetCurrentProcess().Handle,
-                TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES,
+                TokenQuery | TokenAdjustPrivileges,
                 out tokenHandle))
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error(),
@@ -127,10 +153,10 @@ public class UpdateFetcher
             TOKEN_PRIVILEGES tokenPrivs = new TOKEN_PRIVILEGES();
             tokenPrivs.PrivilegeCount = 1;
             tokenPrivs.Privileges = new LUID_AND_ATTRIBUTES[1];
-            tokenPrivs.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+            tokenPrivs.Privileges[0].Attributes = SePrivilegeEnabled;
 
             if (!LookupPrivilegeValue(null,
-                SE_SHUTDOWN_NAME,
+                SeShutdownName,
                 out tokenPrivs.Privileges[0].Luid))
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error(),
@@ -151,8 +177,8 @@ public class UpdateFetcher
 
             // reboot
             if (!ExitWindowsEx(ExitWindows.Reboot,
-                    ShutdownReason.MajorApplication | 
-            ShutdownReason.MinorInstallation | 
+                    ShutdownReason.MajorApplication |
+            ShutdownReason.MinorInstallation |
             ShutdownReason.FlagPlanned))
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error(),
@@ -248,23 +274,23 @@ public class UpdateFetcher
         public LUID_AND_ATTRIBUTES[] Privileges;
     }
 
-    private const UInt32 TOKEN_QUERY = 0x0008;
-    private const UInt32 TOKEN_ADJUST_PRIVILEGES = 0x0020;
-    private const UInt32 SE_PRIVILEGE_ENABLED = 0x00000002;
-    private const string SE_SHUTDOWN_NAME = "SeShutdownPrivilege";
+    private const UInt32 TokenQuery = 0x0008;
+    private const UInt32 TokenAdjustPrivileges = 0x0020;
+    private const UInt32 SePrivilegeEnabled = 0x00000002;
+    private const string SeShutdownName = "SeShutdownPrivilege";
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool ExitWindowsEx(ExitWindows uFlags, 
+    private static extern bool ExitWindowsEx(ExitWindows uFlags,
         ShutdownReason dwReason);
 
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool OpenProcessToken(IntPtr ProcessHandle, 
-        UInt32 DesiredAccess, 
+    private static extern bool OpenProcessToken(IntPtr ProcessHandle,
+        UInt32 DesiredAccess,
         out IntPtr TokenHandle);
 
-    [DllImport("advapi32.dll", SetLastError = true, CharSet=CharSet.Unicode)]
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool LookupPrivilegeValue(string? lpSystemName,
         string lpName,
@@ -277,7 +303,7 @@ public class UpdateFetcher
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool AdjustTokenPrivileges(IntPtr TokenHandle,
-        [MarshalAs(UnmanagedType.Bool)]bool DisableAllPrivileges,
+        [MarshalAs(UnmanagedType.Bool)] bool DisableAllPrivileges,
         ref TOKEN_PRIVILEGES NewState,
         UInt32 Zero,
         IntPtr Null1,
@@ -286,16 +312,16 @@ public class UpdateFetcher
     [Flags]
     enum MoveFileFlags
     {
-        MOVEFILE_REPLACE_EXISTING           = 0x00000001,
-        MOVEFILE_COPY_ALLOWED               = 0x00000002,
-        MOVEFILE_DELAY_UNTIL_REBOOT         = 0x00000004,
-        MOVEFILE_WRITE_THROUGH              = 0x00000008,
-        MOVEFILE_CREATE_HARDLINK            = 0x00000010,
-        MOVEFILE_FAIL_IF_NOT_TRACKABLE      = 0x00000020
+        MOVEFILE_REPLACE_EXISTING = 0x00000001,
+        MOVEFILE_COPY_ALLOWED = 0x00000002,
+        MOVEFILE_DELAY_UNTIL_REBOOT = 0x00000004,
+        MOVEFILE_WRITE_THROUGH = 0x00000008,
+        MOVEFILE_CREATE_HARDLINK = 0x00000010,
+        MOVEFILE_FAIL_IF_NOT_TRACKABLE = 0x00000020
     }
-    
+
     [return: MarshalAs(UnmanagedType.Bool)]
-    [DllImport("kernel32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName,
         MoveFileFlags dwFlags);
 }
