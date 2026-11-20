@@ -27,10 +27,12 @@ repos:
       - id: gitleaks
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.41.0
+    rev: v0.50.0
     hooks:
       - id: markdownlint
-        args: ['--fix', '--disable', 'MD013', 'MD033', 'MD041']
+        # Rules are turned off in .markdownlint.yaml (copy it with this file), not with --disable here:
+        # --disable takes every argument after it, including the file names pre-commit appends.
+        args: ['--fix']
 
   - repo: local
     hooks:
