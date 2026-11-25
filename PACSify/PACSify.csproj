@@ -12,7 +12,7 @@
 
     <ItemGroup>
       <PackageReference Include="fo-dicom" Version="5.2.6" />
-      <PackageReference Include="LibArchive.Net" Version="0.3.1" />
+      <PackageReference Include="LibArchive.Net" Version="0.3.2" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="11.0.0" />
       <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="11.0.0" />
       <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="11.0.0" />
